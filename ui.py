@@ -2760,6 +2760,8 @@ def draw_layer_masks(context, layout, layer, specific_mask=None):
     col = layout.column()
     col.active = layer.enable_masks
 
+    layer_color_ch, layer_alpha_ch = get_layer_color_alpha_ch_pairs(layer)
+
     if not specific_mask:
         #label = 'Masks'
 
@@ -2949,7 +2951,8 @@ def draw_layer_masks(context, layout, layer, specific_mask=None):
                 erow.label(text='', icon='BLANK1')
 
                 rrow = erow.row(align=True)
-                rrow.active = layer.channels[k].enable
+                lc = layer.channels[k]
+                rrow.active = lc.enable if lc != layer_alpha_ch else layer_color_ch.enable or lc.enable
                 root_ch = yp.channels[k]
                 #rrow.label(text='', 
                 #        icon_value=lib.get_icon(lib.channel_custom_icon_dict[root_ch.type]))
