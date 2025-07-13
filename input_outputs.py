@@ -910,7 +910,7 @@ def check_layer_tree_ios(layer, tree=None, remove_props=False, hard_reset=False)
             default_value = ch.intensity_value
 
             # Alpha channel won't use intensity_value prop input if color channel is enabled
-            if alpha_ch != ch or (alpha_ch == ch and (not get_channel_enabled(color_ch) or color_ch.unpair_alpha)):
+            if alpha_ch != ch or (alpha_ch == ch and (not get_channel_enabled(color_ch) or color_ch.unpair_alpha or layer.type == 'GROUP')):
                 # Create intensity socket
                 dirty = create_prop_input(ch, 'intensity_value', valid_inputs, input_index, dirty)
                 input_index += 1
@@ -1067,7 +1067,7 @@ def check_layer_tree_ios(layer, tree=None, remove_props=False, hard_reset=False)
             output_index += 1
 
         # Alpha IO
-        if root_ch.enable_alpha or has_parent:
+        if ch != color_ch and (root_ch.enable_alpha or has_parent):
 
             name = root_ch.name + io_suffix['ALPHA']
 
@@ -1173,6 +1173,8 @@ def check_layer_tree_ios(layer, tree=None, remove_props=False, hard_reset=False)
         for i, ch in enumerate(layer.channels):
             root_ch = yp.channels[i]
             channel_enabled = get_channel_enabled(ch, layer, root_ch)
+            if not channel_enabled and ch == alpha_ch:
+                channel_enabled = get_channel_enabled(color_ch, layer)
 
             #if yp.disable_quick_toggle and not channel_enabled: continue
             if not channel_enabled: continue
@@ -1189,7 +1191,7 @@ def check_layer_tree_ios(layer, tree=None, remove_props=False, hard_reset=False)
                 input_index += 1
 
                 # Alpha Input
-                if root_ch.enable_alpha or layer.type == 'GROUP':
+                if ch != color_ch and (root_ch.enable_alpha or layer.type == 'GROUP'):
 
                     name = root_ch.name + io_suffix['ALPHA'] + io_suffix[layer.type]
                     dirty = create_input(

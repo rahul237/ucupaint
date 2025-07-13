@@ -5394,7 +5394,7 @@ def is_blend_node_needed(ch, layer=None, root_ch=None):
     color_ch, alpha_ch = get_layer_color_alpha_ch_pairs(layer)
 
     # Blend node is necessary for alpha channel that is forced to be unpaired from color channel
-    if ch == alpha_ch and get_channel_enabled(color_ch, layer):
+    if ch == alpha_ch and get_channel_enabled(color_ch, layer) and layer.type != 'GROUP':
         return color_ch.unpair_alpha
 
     return get_channel_enabled(ch, layer, root_ch)
