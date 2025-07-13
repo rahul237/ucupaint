@@ -2371,6 +2371,9 @@ def reconnect_layer_nodes(layer, ch_idx=-1, merge_mask=False):
         # Use alpha channel output as alpha of all other channels if color channel is also enabled
         if alpha_ch_rgb and get_channel_enabled(color_ch, layer):
             alpha = alpha_ch_rgb
+        
+        prev_alpha_alpha = None
+        next_alpha_alpha = None
 
         ch_intensity = get_essential_node(tree, TREE_START).get(get_entity_input_name(ch, 'intensity_value'))
         prev_rgb = get_essential_node(tree, TREE_START).get(root_ch.name)
@@ -2378,6 +2381,8 @@ def reconnect_layer_nodes(layer, ch_idx=-1, merge_mask=False):
             alpha_idx = get_layer_channel_index(layer, alpha_ch)
             root_alpha_ch = yp.channels[alpha_idx]
             prev_alpha = get_essential_node(tree, TREE_START).get(root_alpha_ch.name)
+            prev_alpha_alpha = get_essential_node(tree, TREE_START).get(root_alpha_ch.name + io_suffix['ALPHA'])
+            next_alpha_alpha = get_essential_node(tree, TREE_END).get(root_alpha_ch.name + io_suffix['ALPHA'])
         else:
             prev_alpha = get_essential_node(tree, TREE_START).get(root_ch.name + io_suffix['ALPHA'])
 
@@ -3701,6 +3706,11 @@ def reconnect_layer_nodes(layer, ch_idx=-1, merge_mask=False):
         if ch == alpha_ch and not color_ch.unpair_alpha:
             alpha_ch_rgb = rgb
 
+            group_alpha_multiply = tree.nodes.get(ch.group_alpha_multiply) 
+            if alpha and group_alpha_multiply:
+                alpha_ch_rgb = create_link(tree, alpha_ch_rgb, group_alpha_multiply.inputs[0])[0]
+                create_link(tree, alpha, group_alpha_multiply.inputs[1])
+
         if blend:
             bcol0, bcol1, bout = get_mix_color_indices(blend)
 
@@ -3716,10 +3726,17 @@ def reconnect_layer_nodes(layer, ch_idx=-1, merge_mask=False):
                     or (blend_type == 'OVERLAY' and has_parent and root_ch.type == 'NORMAL')
                 ):
 
-                if prev_rgb: create_link(tree, prev_rgb, blend.inputs[0])
-                if prev_alpha: create_link(tree, prev_alpha, blend.inputs[1])
+                if prev_rgb:
+                    if 'Color1' in blend.inputs: create_link(tree, prev_rgb, blend.inputs['Color1'])
+                    elif 'Value1' in blend.inputs: create_link(tree, prev_rgb, blend.inputs['Value1'])
+                if prev_alpha and 'Alpha1' in blend.inputs: create_link(tree, prev_alpha, blend.inputs['Alpha1'])
 
-                create_link(tree, alpha, blend.inputs[3])
+                if prev_alpha_alpha and 'Alpha1 Alpha' in blend.inputs: 
+                    create_link(tree, prev_alpha_alpha, blend.inputs['Alpha1 Alpha'])
+                if next_alpha_alpha and 'Alpha Alpha' in blend.outputs: 
+                    create_link(tree, blend.outputs['Alpha Alpha'], next_alpha_alpha)
+
+                if 'Alpha2' in blend.inputs: create_link(tree, alpha, blend.inputs['Alpha2'])
 
                 if bg_alpha and len(blend.inputs) > 4:
                     create_link(tree, bg_alpha, blend.inputs[4])

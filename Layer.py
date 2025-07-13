@@ -6529,6 +6529,9 @@ class YLayerChannel(bpy.types.PropertyGroup):
     flip_y : StringProperty(default='')
     vdisp_flip_yz : StringProperty(default='')
 
+    # Alpha related
+    group_alpha_multiply : StringProperty(default='')
+
     # Height related
     height_proc : StringProperty(default='')
     height_blend : StringProperty(default='')

@@ -685,6 +685,8 @@ def check_all_layer_channel_io_and_nodes(layer, tree=None, specific_ch=None, do_
     # Linear node
     check_layer_image_linear_node(layer)
 
+    check_group_alpha_multiply_node(layer)
+
     # Check the need of bump process
     check_layer_bump_process(layer, tree)
 

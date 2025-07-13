@@ -2356,6 +2356,8 @@ def check_blend_type_nodes(root_ch, layer, ch):
 
     has_parent = layer.parent_idx != -1
 
+    color_ch, alpha_ch = get_layer_color_alpha_ch_pairs(layer)
+
     # Check if channel is enabled
     channel_enabled = is_blend_node_needed(ch, layer, root_ch)
 
@@ -2386,6 +2388,11 @@ def check_blend_type_nodes(root_ch, layer, ch):
                         ):
                         blend, need_reconnect = replace_new_node(
                             tree, ch, 'blend', 'ShaderNodeGroup', 'Blend', lib.STRAIGHT_OVER_BG,
+                            return_status=True, hard_replace=True, dirty=need_reconnect
+                        )
+                    elif has_parent and ch == color_ch: 
+                        blend, need_reconnect = replace_new_node(
+                            tree, ch, 'blend',  'ShaderNodeGroup', 'Blend', lib.STRAIGHT_OVER_PAIRED_COLOR_CHILD, 
                             return_status=True, hard_replace=True, dirty=need_reconnect
                         )
 
@@ -2628,3 +2635,15 @@ def check_yp_linear_nodes(yp, specific_layer=None, reconnect=True):
         if reconnect:
             reconnect_layer_nodes(layer)
             rearrange_layer_nodes(layer)
+
+def check_group_alpha_multiply_node(layer):
+    color_ch, alpha_ch = get_layer_color_alpha_ch_pairs(layer)
+    tree = get_tree(layer)
+    # Group alpha multiply only need if color channel is enabled
+    if layer.type == 'GROUP' and alpha_ch and get_channel_enabled(color_ch, layer):
+        group_alpha_multiply = check_new_node(tree, alpha_ch, 'group_alpha_multiply', 'ShaderNodeMath', 'Group Alpha Multiply')
+        group_alpha_multiply.operation = 'MULTIPLY'
+    else:
+        for ch in layer.channels:
+            remove_node(tree, ch, 'group_alpha_multiply')
+

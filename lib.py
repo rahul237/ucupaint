@@ -29,6 +29,8 @@ STRAIGHT_OVER_BG_VEC = '~yPL Straight Over Vector Background Mix'
 STRAIGHT_OVER_HEIGHT_MIX = '~yPL Straight Over Height Mix'
 STRAIGHT_OVER_HEIGHT_ADD = '~yPL Straight Over Height Add'
 
+STRAIGHT_OVER_PAIRED_COLOR_CHILD = '~yPL Straight Over Paired Color Child Mix'
+
 #STRAIGHT_OVER_BG_RAMP = '~yPL Straight Over Background Mix Ramp'
 
 SPREAD_ALPHA = '~yPL Spread Alpha'
