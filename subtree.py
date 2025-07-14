@@ -2392,7 +2392,7 @@ def check_blend_type_nodes(root_ch, layer, ch):
                         )
                     elif has_parent and ch == color_ch: 
                         blend, need_reconnect = replace_new_node(
-                            tree, ch, 'blend',  'ShaderNodeGroup', 'Blend', lib.STRAIGHT_OVER_PAIRED_COLOR_CHILD, 
+                            tree, ch, 'blend',  'ShaderNodeGroup', 'Blend', lib.STRAIGHT_OVER_PAIRED_CHILD, 
                             return_status=True, hard_replace=True, dirty=need_reconnect
                         )
 

@@ -5382,6 +5382,23 @@ def get_channel_enabled(ch, layer=None, root_ch=None):
 
     return True
 
+def is_unpaired_alpha_chilren_exist(layer):
+    if layer.type != 'GROUP': return False
+
+    lays = get_list_of_direct_children(layer)
+    for l in lays:
+        if not l.enable: continue
+        cc, ac = get_layer_color_alpha_ch_pairs(l)
+        if not ac: continue
+
+        if l.type != 'GROUP' and ((not cc.enable and ac.enable) or (cc.enable and cc.unpair_alpha)):
+            return True
+
+        if l.type == 'GROUP' and ac.enable and is_unpaired_alpha_chilren_exist(l):
+            return True
+
+    return False
+
 def is_blend_node_needed(ch, layer=None, root_ch=None):
     yp = ch.id_data.yp
 
@@ -5394,8 +5411,12 @@ def is_blend_node_needed(ch, layer=None, root_ch=None):
     color_ch, alpha_ch = get_layer_color_alpha_ch_pairs(layer)
 
     # Blend node is necessary for alpha channel that is forced to be unpaired from color channel
-    if ch == alpha_ch and get_channel_enabled(color_ch, layer) and layer.type != 'GROUP':
-        return color_ch.unpair_alpha
+    if ch == alpha_ch:
+        if layer.type == 'GROUP':
+            return is_unpaired_alpha_chilren_exist(layer)
+
+        elif get_channel_enabled(color_ch, layer):
+            return color_ch.unpair_alpha
 
     return get_channel_enabled(ch, layer, root_ch)
 

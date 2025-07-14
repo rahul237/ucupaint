@@ -3644,6 +3644,10 @@ def reconnect_layer_nodes(layer, ch_idx=-1, merge_mask=False):
                     if prev_alpha: create_link(tree, prev_alpha, tr_ramp_blend.inputs['Input Alpha'])
                     prev_alpha = tr_ramp_blend.outputs['Input Alpha']
 
+                if 'Input Alpha Alpha' in tr_ramp_blend.inputs:
+                    if prev_alpha_alpha: create_link(tree, prev_alpha_alpha, tr_ramp_blend.inputs['Input Alpha Alpha'])
+                    prev_alpha_alpha = tr_ramp_blend.outputs['Input Alpha Alpha']
+
                 #break_input_link(tree, tr_ramp_blend.inputs['Intensity'])
 
             elif not trans_bump_flip:
@@ -3733,8 +3737,9 @@ def reconnect_layer_nodes(layer, ch_idx=-1, merge_mask=False):
 
                 if prev_alpha_alpha and 'Alpha1 Alpha' in blend.inputs: 
                     create_link(tree, prev_alpha_alpha, blend.inputs['Alpha1 Alpha'])
-                if next_alpha_alpha and 'Alpha Alpha' in blend.outputs: 
-                    create_link(tree, blend.outputs['Alpha Alpha'], next_alpha_alpha)
+                if not ch.unpair_alpha:
+                    if next_alpha_alpha and 'Alpha Alpha' in blend.outputs: 
+                        create_link(tree, blend.outputs['Alpha Alpha'], next_alpha_alpha)
 
                 if 'Alpha2' in blend.inputs: create_link(tree, alpha, blend.inputs['Alpha2'])
 
