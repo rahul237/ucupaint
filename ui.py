@@ -1172,10 +1172,8 @@ def draw_root_channels_ui(context, layout, node):
                 #if len(channel.modifiers) > 0:
                 #    brow.label(text='', icon='BLANK1')
 
-            # Alpha settings will only visible on color channel without developer mode
-            # Alpha will also not visible if other channel already enable the alpha
-            if ((channel.type == 'RGB' and not any([c for c in yp.channels if c.enable_alpha and c != channel]))
-                or ypup.developer_mode or channel.enable_alpha):
+            # Alpha is no longer available to access without developer mode 
+            if ypup.developer_mode or channel.enable_alpha:
                 brow = bcol.row() #align=True)
 
                 rrow = brow.row(align=True)

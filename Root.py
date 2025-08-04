@@ -827,7 +827,7 @@ class YQuickYPaintNodeSetup(bpy.types.Operator):
                 links.new(node.outputs[ch_color.name], inp)
 
         if ch_alpha:
-            default_value = do_alpha_setup(mat, node, ch_alpha)
+            default_value = do_alpha_setup(mat, node, ch_alpha, do_alpha_dither_setup=True)
             set_input_default_value(node, ch_alpha, default_value)
 
         if ch_ao:
@@ -1021,7 +1021,17 @@ def refresh_input_coll(self, context, ch_type):
             item.input_name = inp.name
             item.input_index = i
 
-def do_alpha_setup(mat, node, channel):
+def setup_alpha_dither(mat):
+    if not is_bl_newer_than(4, 2):
+        if is_bl_newer_than(2, 80):
+            # EEVEE legacy doesn't use alpha dither by default
+            mat.blend_method = 'HASHED'
+            mat.shadow_method = 'HASHED'
+        else:
+            # There's no alpha dither on legacy blender
+            mat.game_settings.alpha_blend = 'ALPHA'
+
+def do_alpha_setup(mat, node, channel, do_alpha_dither_setup=False):
     tree = mat.node_tree
     yp = node.node_tree.yp
 
@@ -1046,6 +1056,9 @@ def do_alpha_setup(mat, node, channel):
     # Main channel output need to be already connected
     if len(output.links) == 0:
         return
+
+    if do_alpha_dither_setup:
+        setup_alpha_dither(mat)
 
     alpha_input_connected = len(alpha_input.links) > 0
     new_nodes_created = False
@@ -1229,7 +1242,7 @@ def make_channel_as_alpha(mat, node, channel, do_setup=False):
 
     if do_setup:
         # Set up alpha connections
-        default_value = do_alpha_setup(mat, node, channel)
+        default_value = do_alpha_setup(mat, node, channel, do_alpha_dither_setup=True)
         node.inputs[channel.name].default_value = default_value
 
 class YAutoSetupNewYPaintChannel(bpy.types.Operator):
