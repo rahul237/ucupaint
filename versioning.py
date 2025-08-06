@@ -7,7 +7,7 @@ from bpy.app.handlers import persistent
 from .node_arrangements import *
 from .node_connections import *
 from .input_outputs import *
-from . import Bake, ListItem, Modifier
+from . import Bake, ListItem, Modifier, Root
 
 def flip_tangent_sign():
     meshes = []
@@ -994,6 +994,62 @@ def update_yp_tree(tree):
                     if height_ch.normal_map_type in {'BUMP_MAP', 'BUMP_NORMAL_MAP'} and not height_ch.write_height:
                         height = get_entity_prop_value(height_ch, 'bump_distance')
                         set_entity_prop_value(height_ch, 'bump_distance', height * 5)
+
+    # Version 2.4 has new alpha channel system
+    if version_tuple(yp.version) < (2, 4, 0):
+        # Get color channel pair for alpha channel
+        color_ch = None
+        alpha_socs = {}
+        alpha_soc_defaults = {}
+        for ch in yp.channels:
+            if ch.enable_alpha:
+
+                # Remember original connections
+                mats = get_materials_using_yp(yp)
+                for mat in mats:
+                    alpha_socs[mat.name] = {}
+                    alpha_soc_defaults[mat.name] = {}
+                    for node in mat.node_tree.nodes:
+                        if node.type == 'GROUP' and node.node_tree and node.node_tree.yp == yp:
+                            alpha_socs[mat.name][node.name] = []
+
+                            inp = node.inputs.get(ch.name + io_suffix['ALPHA'])
+                            outp = node.outputs.get(ch.name + io_suffix['ALPHA'])
+
+                            if inp: 
+                                alpha_soc_defaults[mat.name][node.name] = inp.default_value
+                            if outp:
+                                for link in outp.links:
+                                    alpha_socs[mat.name][node.name].append(link.to_socket)
+
+                ch.enable_alpha = False
+                color_ch = ch
+
+                break
+
+        if color_ch:
+
+            # Create alpha channel
+            alpha_ch = Root.create_new_yp_channel(tree, 'Alpha', 'VALUE', non_color=True)
+            alpha_ch.is_alpha = True
+            alpha_ch.alpha_pair_name = color_ch.name
+
+            check_all_channel_ios(yp, yp_node=None)
+
+            mats = get_materials_using_yp(yp)
+            for mat in mats:
+                for node in mat.node_tree.nodes:
+                    if node.type == 'GROUP' and node.node_tree and node.node_tree.yp == yp:
+                        if mat.name in alpha_socs and node.name in alpha_socs[mat.name]:
+                            socs = alpha_socs[mat.name][node.name]
+                            outp = node.outputs.get(alpha_ch.name)
+                            # Connect to original sockets
+                            for soc in socs:
+                                mat.node_tree.links.new(outp, soc)
+
+                        if mat.name in alpha_soc_defaults and node.name in alpha_soc_defaults[mat.name]:
+                            inp = node.inputs.get(alpha_ch.name)
+                            inp.default_value = alpha_soc_defaults[mat.name][node.name]
 
     # SECTION II: Updates based on the blender version
 

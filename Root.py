@@ -1224,7 +1224,7 @@ class YConnectYPaintChannel(bpy.types.Operator):
 
         return {'FINISHED'}
 
-def make_channel_as_alpha(mat, node, channel, do_setup=False):
+def make_channel_as_alpha(mat, node, channel, do_setup=False, move_index=False):
     yp = channel.id_data.yp
     if channel.type != 'VALUE': return
 
@@ -1232,10 +1232,23 @@ def make_channel_as_alpha(mat, node, channel, do_setup=False):
     channel.is_alpha = True
 
     # Set first RGB channel as the pair
-    for ch in yp.channels:
+    color_ch = None
+    color_idx = -1
+    for i, ch in enumerate(yp.channels):
         if ch.type == 'RGB':
             channel.alpha_pair_name = ch.name
+            color_ch = ch
+            color_idx = i
             break
+
+    # Move channel to below color channel
+    if move_index and color_ch:
+        alpha_idx = get_channel_index(channel)
+        yp.channels.move(alpha_idx, color_idx+1)
+
+        # Repoint channel to alpha channel since the orders are changed
+        color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
+        channel = alpha_ch
 
     # Update io since alpha is enabled on all color layers
     check_all_channel_ios(yp, yp_node=node)
@@ -1302,7 +1315,7 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator):
         if self.mode == 'AO':
             create_ao_node(mat, node, channel, shift_other_nodes=True)
         elif self.mode == 'ALPHA':
-            make_channel_as_alpha(mat, node, channel, do_setup=True)
+            make_channel_as_alpha(mat, node, channel, do_setup=True, move_index=True)
 
         return {'FINISHED'}
 
@@ -3379,7 +3392,8 @@ def update_channel_alpha(self, context):
 
     if not self.enable_alpha:
 
-        if not any(alpha_chs):
+        # NOTE: Set blend method to opaque is no longer needed since version 2.4
+        if False and not any(alpha_chs):
 
             # Set material to use opaque (only for legacy renderer)
             if not is_bl_newer_than(4, 2):
