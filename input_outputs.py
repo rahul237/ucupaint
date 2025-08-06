@@ -455,12 +455,12 @@ def check_all_channel_ios(yp, reconnect=True, specific_layer=None, remove_props=
 
                 if inp.name == ch.name + io_suffix['ALPHA']:
                     node_inp = group_node.inputs.get(inp.name)
-                    ch.ori_alpha_value = node_inp.default_value
+                    if node_inp: ch.ori_alpha_value = node_inp.default_value
 
                 if ch.type == 'NORMAL':
                     if inp.name == ch.name + io_suffix['MAX_HEIGHT']:
                         node_inp = group_node.inputs.get(inp.name)
-                        ch.ori_max_height_value = node_inp.default_value
+                        if node_inp: ch.ori_max_height_value = node_inp.default_value
 
             remove_tree_input(group_tree, inp)
 

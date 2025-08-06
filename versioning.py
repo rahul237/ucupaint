@@ -998,7 +998,7 @@ def update_yp_tree(tree):
     # Version 2.4 has new alpha channel system
     if version_tuple(yp.version) < (2, 4, 0):
         # Get color channel pair for alpha channel
-        color_ch = None
+        color_ch_name = ''
         alpha_socs = {}
         alpha_soc_defaults = {}
         for ch in yp.channels:
@@ -1023,16 +1023,16 @@ def update_yp_tree(tree):
                                     alpha_socs[mat.name][node.name].append(link.to_socket)
 
                 ch.enable_alpha = False
-                color_ch = ch
+                color_ch_name = ch.name
 
                 break
 
-        if color_ch:
+        if color_ch_name != '':
 
             # Create alpha channel
             alpha_ch = Root.create_new_yp_channel(tree, 'Alpha', 'VALUE', non_color=True)
             alpha_ch.is_alpha = True
-            alpha_ch.alpha_pair_name = color_ch.name
+            alpha_ch.alpha_pair_name = color_ch_name
 
             check_all_channel_ios(yp, yp_node=None)
 
