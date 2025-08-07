@@ -7,7 +7,7 @@ from bpy.app.handlers import persistent
 from .node_arrangements import *
 from .node_connections import *
 from .input_outputs import *
-from . import Bake, ListItem, Modifier, Root
+from . import Bake, ListItem, Modifier, Root, Layer
 
 def flip_tangent_sign():
     meshes = []
@@ -1050,6 +1050,25 @@ def update_yp_tree(tree):
                         if mat.name in alpha_soc_defaults and node.name in alpha_soc_defaults[mat.name]:
                             inp = node.inputs.get(alpha_ch.name)
                             inp.default_value = alpha_soc_defaults[mat.name][node.name]
+
+        # Convert background layer to solid color
+        for layer in yp.layers:
+            if layer.type == 'BACKGROUND':
+                Layer.replace_layer_type(layer, 'COLOR')
+                if 'Solid Color' in layer.name: layer.name = 'Hole'
+
+                source = get_layer_source(layer)
+                source.outputs[0].default_value = (0.0, 0.0, 0.0, 1.0)
+
+                # Disable color and enable alpha channel
+                layer_color_ch, layer_alpha_ch = get_layer_color_alpha_ch_pairs(layer)
+                if layer_color_ch and layer_alpha_ch:
+                    if layer_color_ch.enable_transition_ramp:
+                        layer_color_ch.unpair_alpha = True
+                        set_entity_prop_value(layer_alpha_ch, 'transition_bump_fac', 0.0)
+                    else: layer_color_ch.enable = False
+
+                    layer_alpha_ch.enable = True
 
     # SECTION II: Updates based on the blender version
 
