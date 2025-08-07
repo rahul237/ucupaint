@@ -1243,8 +1243,7 @@ def make_channel_as_alpha(mat, node, channel, do_setup=False, move_index=False):
 
     # Move channel to below color channel
     if move_index and color_ch:
-        alpha_idx = get_channel_index(channel)
-        yp.channels.move(alpha_idx, color_idx+1)
+        set_channel_index(channel, color_idx+1)
 
         # Repoint channel to alpha channel since the orders are changed
         color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
@@ -1554,6 +1553,39 @@ class YNewYPaintChannel(bpy.types.Operator):
 
         return {'FINISHED'}
 
+def set_channel_index(channel, new_index):
+    yp = channel.id_data.yp
+
+    index = get_channel_index(channel)
+
+    if index == new_index:
+        return
+
+    # Remove props first
+    check_all_channel_ios(yp, reconnect=False, remove_props=True)
+
+    # Get IO index
+    swap_ch = yp.channels[new_index]
+    io_index = channel.io_index
+    io_index_swap = swap_ch.io_index
+
+    # Move channel
+    yp.channels.move(index, new_index)
+    swap_channel_fcurves(yp, index, new_index)
+
+    # Move layer channels
+    for layer in yp.layers:
+        layer.channels.move(index, new_index)
+        swap_layer_channel_fcurves(layer, index, new_index)
+
+        # Move mask channels
+        for mask in layer.masks:
+            mask.channels.move(index, new_index)
+            swap_mask_channel_fcurves(mask, index, new_index)
+
+    # Move IO
+    check_all_channel_ios(yp)
+
 class YMoveYPaintChannel(bpy.types.Operator):
     bl_idname = "wm.y_move_ypaint_channel"
     bl_label = "Move " + get_addon_title() + " Channel"
@@ -1603,30 +1635,7 @@ class YMoveYPaintChannel(bpy.types.Operator):
         #setattr(ypui, 'show_channel_modifiers_' + str(index), temp_1)
         #setattr(ypui, 'show_channel_modifiers_' + str(new_index), temp_0)
 
-        # Remove props first
-        check_all_channel_ios(yp, reconnect=False, remove_props=True)
-
-        # Get IO index
-        swap_ch = yp.channels[new_index]
-        io_index = channel.io_index
-        io_index_swap = swap_ch.io_index
-
-        # Move channel
-        yp.channels.move(index, new_index)
-        swap_channel_fcurves(yp, index, new_index)
-
-        # Move layer channels
-        for layer in yp.layers:
-            layer.channels.move(index, new_index)
-            swap_layer_channel_fcurves(layer, index, new_index)
-
-            # Move mask channels
-            for mask in layer.masks:
-                mask.channels.move(index, new_index)
-                swap_mask_channel_fcurves(mask, index, new_index)
-
-        # Move IO
-        check_all_channel_ios(yp)
+        set_channel_index(channel, new_index)
 
         # Set active index
         yp.active_channel_index = new_index

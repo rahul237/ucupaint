@@ -1034,14 +1034,14 @@ def update_yp_tree(tree):
             alpha_ch.is_alpha = True
             alpha_ch.alpha_pair_name = color_ch_name
 
-            ## Move index
-            #alpha_idx = get_channel_index(alpha_ch)
-            #color_ch = yp.channels.get(color_ch_name)
-            #color_idx = get_channel_index(color_ch)
-            #yp.channels.move(alpha_idx, color_idx+1)
 
-            ## Repoint after creating new data
-            #color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
+            # Move index
+            color_ch = yp.channels.get(color_ch_name)
+            color_idx = get_channel_index(color_ch)
+            Root.set_channel_index(alpha_ch, color_idx+1)
+
+            # Repoint after creating new data
+            color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
 
             check_all_channel_ios(yp, yp_node=None)
 
