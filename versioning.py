@@ -1034,6 +1034,15 @@ def update_yp_tree(tree):
             alpha_ch.is_alpha = True
             alpha_ch.alpha_pair_name = color_ch_name
 
+            ## Move index
+            #alpha_idx = get_channel_index(alpha_ch)
+            #color_ch = yp.channels.get(color_ch_name)
+            #color_idx = get_channel_index(color_ch)
+            #yp.channels.move(alpha_idx, color_idx+1)
+
+            ## Repoint after creating new data
+            #color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
+
             check_all_channel_ios(yp, yp_node=None)
 
             mats = get_materials_using_yp(yp)
@@ -1065,7 +1074,9 @@ def update_yp_tree(tree):
                 if layer_color_ch and layer_alpha_ch:
                     if layer_color_ch.enable_transition_ramp:
                         layer_color_ch.unpair_alpha = True
-                        set_entity_prop_value(layer_alpha_ch, 'transition_bump_fac', 0.0)
+                        height_ch = get_height_channel(layer)
+                        if height_ch and height_ch.enable_transition_bump and not height_ch.transition_bump_flip:
+                            set_entity_prop_value(layer_alpha_ch, 'transition_bump_fac', 0.0)
                     else: layer_color_ch.enable = False
 
                     layer_alpha_ch.enable = True
