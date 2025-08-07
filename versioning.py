@@ -1034,7 +1034,6 @@ def update_yp_tree(tree):
             alpha_ch.is_alpha = True
             alpha_ch.alpha_pair_name = color_ch_name
 
-
             # Move index
             color_ch = yp.channels.get(color_ch_name)
             color_idx = get_channel_index(color_ch)
