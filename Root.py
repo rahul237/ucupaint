@@ -3517,6 +3517,11 @@ def update_channel_alpha_pair_name(self, context):
     
     if yp.halt_update: return
 
+    if self.alpha_pair_name == self.name:
+        yp.halt_update = True
+        self.alpha_pair_name = ''
+        yp.halt_update = False
+
     check_all_channel_ios(yp)
 
 def update_channel_alpha_blend_mode(self, context):
