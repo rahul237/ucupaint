@@ -1032,7 +1032,9 @@ def update_yp_tree(tree):
             # Create alpha channel
             alpha_ch = Root.create_new_yp_channel(tree, 'Alpha', 'VALUE', non_color=True)
             alpha_ch.is_alpha = True
+            yp.halt_update = True
             alpha_ch.alpha_pair_name = color_ch_name
+            yp.halt_update = False
 
             # Move index
             color_ch = yp.channels.get(color_ch_name)

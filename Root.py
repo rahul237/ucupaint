@@ -780,7 +780,9 @@ class YQuickYPaintNodeSetup(bpy.types.Operator):
         if ch_color and self.alpha:
             ch_alpha = create_new_yp_channel(group_tree, 'Alpha', 'VALUE', non_color=True)
             ch_alpha.is_alpha = True
+            group_tree.yp.halt_update = True
             ch_alpha.alpha_pair_name = ch_color.name
+            group_tree.yp.halt_update = False
 
         if self.type != 'EMISSION':
             if self.ao:
@@ -1236,7 +1238,9 @@ def make_channel_as_alpha(mat, node, channel, do_setup=False, move_index=False):
     color_idx = -1
     for i, ch in enumerate(yp.channels):
         if ch.type == 'RGB':
+            yp.halt_update = True
             channel.alpha_pair_name = ch.name
+            yp.halt_update = False
             color_ch = ch
             color_idx = i
             break
@@ -3508,6 +3512,13 @@ def update_channel_alpha(self, context):
 
     yp.refresh_tree = True
 
+def update_channel_alpha_pair_name(self, context):
+    yp = self.id_data.yp
+    
+    if yp.halt_update: return
+
+    check_all_channel_ios(yp)
+
 def update_channel_alpha_blend_mode(self, context):
     mat = get_active_material()
     group_tree = self.id_data
@@ -3740,7 +3751,8 @@ class YPaintChannel(bpy.types.PropertyGroup):
     alpha_pair_name : StringProperty(
         name = 'Alpha Channel Pair',
         description = 'Color channel pair for alpha channel',
-        default=''
+        default='',
+        update = update_channel_alpha_pair_name
     )
 
     alpha_combine_to_baked_color : BoolProperty(
