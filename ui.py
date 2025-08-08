@@ -5732,18 +5732,19 @@ class YNewLayerMenu(bpy.types.Menu):
             c.add_mask = True
             c.mask_type = 'EDGE_DETECT'
 
-        col.separator()
+        if ypup.developer_mode:
+            col.separator()
 
-        #col.label(text='Background:')
-        c = col.operator("wm.y_new_layer", icon_value=lib.get_icon('background'), text='Background w/ Image Mask')
-        c.type = 'BACKGROUND'
-        c.add_mask = True
-        c.mask_type = 'IMAGE'
+            #col.label(text='Background:')
+            c = col.operator("wm.y_new_layer", icon_value=lib.get_icon('background'), text='Background w/ Image Mask')
+            c.type = 'BACKGROUND'
+            c.add_mask = True
+            c.mask_type = 'IMAGE'
 
-        #if is_bl_newer_than(2, 80):
-        #    c = col.operator("wm.y_new_layer", text='Background w/ Vertex Color Mask')
-        #else: c = col.operator("wm.y_new_layer", text='Background w/ Vertex Color Mask')
-        c = col.operator("wm.y_new_layer", text='Background w/ Vertex Color Mask')
+            #if is_bl_newer_than(2, 80):
+            #    c = col.operator("wm.y_new_layer", text='Background w/ Vertex Color Mask')
+            #else: c = col.operator("wm.y_new_layer", text='Background w/ Vertex Color Mask')
+            c = col.operator("wm.y_new_layer", text='Background w/ Vertex Color Mask')
 
         c.type = 'BACKGROUND'
         c.add_mask = True
@@ -7022,6 +7023,7 @@ class YLayerTypeMenu(bpy.types.Menu):
     def draw(self, context):
         layer = context.layer
         tree = get_tree(layer)
+        ypup = get_user_preferences()
         
         col = self.layout.column()
         col.label(text='Layer Source')
@@ -7074,8 +7076,9 @@ class YLayerTypeMenu(bpy.types.Menu):
         icon = 'RADIOBUT_ON' if layer.type == 'COLOR' else 'RADIOBUT_OFF'
         col.operator('wm.y_replace_layer_type', text='Solid Color', icon=icon).type = 'COLOR'
 
-        icon = 'RADIOBUT_ON' if layer.type == 'BACKGROUND' else 'RADIOBUT_OFF'
-        col.operator('wm.y_replace_layer_type', text='Background', icon=icon).type = 'BACKGROUND'
+        if ypup.developer_mode or layer.type == 'BACKGROUND':
+            icon = 'RADIOBUT_ON' if layer.type == 'BACKGROUND' else 'RADIOBUT_OFF'
+            col.operator('wm.y_replace_layer_type', text='Background', icon=icon).type = 'BACKGROUND'
 
         icon = 'RADIOBUT_ON' if layer.type == 'GROUP' else 'RADIOBUT_OFF'
         col.operator('wm.y_replace_layer_type', text='Group', icon=icon).type = 'GROUP'
