@@ -2438,6 +2438,13 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
                 ori_blend_type = ch.normal_blend_type
                 ch.normal_blend_type = 'MIX'
 
+            # New alpha channel can make the merging result goes blank, so disable it first
+            color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
+            ori_alpha_pair = ''
+            if alpha_ch:
+                ori_alpha_pair = alpha_ch.alpha_pair_name
+                alpha_ch.alpha_pair_name = ''
+
             # Enable alpha on main channel (will also update all the nodes)
             ori_enable_alpha = main_ch.enable_alpha
             yp.alpha_auto_setup = False
@@ -2469,6 +2476,10 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
             # Recover original props
             main_ch.enable_alpha = ori_enable_alpha
             yp.alpha_auto_setup = True
+
+            if alpha_ch and ori_alpha_pair != '':
+                alpha_ch.alpha_pair_name = ori_alpha_pair
+
             if main_ch.type != 'NORMAL':
                 ch.blend_type = ori_blend_type
             else: ch.normal_blend_type = ori_blend_type
