@@ -1696,6 +1696,7 @@ class YBakeChannels(bpy.types.Operator, BaseBakeOperator):
             if alpha_ch == ch and alpha_ch.alpha_combine_to_baked_color:
                 remove_node(tree, alpha_ch, 'baked')
                 ch.no_layer_using = False
+                baked_exists.append(False)
                 continue
 
             # Check if baked node exists

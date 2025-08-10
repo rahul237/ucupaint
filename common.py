@@ -5561,9 +5561,14 @@ def is_any_layer_using_channel(root_ch, node=None):
             if inp and len(inp.links):
                 return True
 
+    color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
+    color_ch_idx = get_channel_index(color_ch) if root_ch == alpha_ch else -1
+
     for layer in yp.layers:
         if layer.type in {'GROUP', 'BACKGROUND'}: continue
-        if get_channel_enabled(layer.channels[ch_idx], layer):
+        if (get_channel_enabled(layer.channels[ch_idx], layer) or 
+            (root_ch == alpha_ch and get_channel_enabled(layer.channels[color_ch_idx], layer))
+        ):
             return True
 
     return False
