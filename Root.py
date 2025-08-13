@@ -5,7 +5,7 @@ from .common import *
 from .subtree import *
 from .node_arrangements import *
 from .node_connections import *
-from . import lib, Modifier, Layer, Mask, transition, Bake, BakeTarget, ListItem
+from . import lib, Modifier, Layer, Mask, transition, Bake, BakeTarget, ListItem, BaseOperator
 from .input_outputs import *
 
 YP_GROUP_SUFFIX = ' ' + get_addon_title()
@@ -488,7 +488,7 @@ def create_ao_node(mat, node, channel=None, shift_other_nodes=False):
 
     return ao_mul
 
-class YQuickYPaintNodeSetup(bpy.types.Operator):
+class YQuickYPaintNodeSetup(bpy.types.Operator, BaseOperator.BlendMethodOptions):
     bl_idname = "wm.y_quick_ypaint_node_setup"
     bl_label = "Quick " + get_addon_title() + " Node Setup"
     bl_description = "Quick " + get_addon_title() + " Node Setup"
@@ -598,12 +598,24 @@ class YQuickYPaintNodeSetup(bpy.types.Operator):
         if self.type != 'EMISSION':
             ccol = col.column(align=True)
             ccol.label(text='Channels:')
-
+            if self.color:
+                ccol.label(text='')
             ccol.label(text='')
             if self.type == 'BSDF_PRINCIPLED':
                 ccol.label(text='')
             ccol.label(text='')
             ccol.label(text='')
+
+        if (self.color or self.type == 'EMISSION') and self.alpha:
+            if self.type == 'EMISSION': 
+                col.label(text='')
+
+            if is_bl_newer_than(2, 80):
+                if is_bl_newer_than(4, 2):
+                    col.label(text='Render Method:')
+                else:
+                    col.label(text='Blend Method:')
+                    col.label(text='Shadow Method:')
 
         col = row.column()
         rrow = col.row(align=True)
@@ -624,6 +636,14 @@ class YQuickYPaintNodeSetup(bpy.types.Operator):
         else:
             ccol = col.column(align=True)
             ccol.prop(self, 'alpha', text='Enable Alpha')
+
+        if (self.color or self.type == 'EMISSION') and self.alpha:
+            if is_bl_newer_than(2, 80):
+                if is_bl_newer_than(4, 2):
+                    col.prop(self, 'surface_render_method', text='')
+                else:
+                    col.prop(self, 'blend_method', text='')
+                    col.prop(self, 'shadow_method', text='')
 
         col.prop(self, 'use_linear_blending')
 
@@ -829,7 +849,8 @@ class YQuickYPaintNodeSetup(bpy.types.Operator):
                 links.new(node.outputs[ch_color.name], inp)
 
         if ch_alpha:
-            default_value = do_alpha_setup(mat, node, ch_alpha, do_alpha_dither_setup=True)
+            default_value = do_alpha_setup(mat, node, ch_alpha)
+            set_material_methods(mat, self.surface_render_method, self.blend_method, self.shadow_method)
             set_input_default_value(node, ch_alpha, default_value)
 
         if ch_ao:
@@ -1023,17 +1044,19 @@ def refresh_input_coll(self, context, ch_type):
             item.input_name = inp.name
             item.input_index = i
 
-def setup_alpha_dither(mat):
+def set_material_methods(mat, surface_render_method='DITHERED', blend_method='HASHED', shadow_method='HASHED'):
     if not is_bl_newer_than(4, 2):
         if is_bl_newer_than(2, 80):
             # EEVEE legacy doesn't use alpha dither by default
-            mat.blend_method = 'HASHED'
-            mat.shadow_method = 'HASHED'
+            mat.blend_method = blend_method
+            mat.shadow_method = shadow_method
         else:
             # There's no alpha dither on legacy blender
             mat.game_settings.alpha_blend = 'ALPHA'
+    else:
+        mat.surface_render_method = surface_render_method
 
-def do_alpha_setup(mat, node, channel, do_alpha_dither_setup=False):
+def do_alpha_setup(mat, node, channel):
     tree = mat.node_tree
     yp = node.node_tree.yp
 
@@ -1058,9 +1081,6 @@ def do_alpha_setup(mat, node, channel, do_alpha_dither_setup=False):
     # Main channel output need to be already connected
     if len(output.links) == 0:
         return
-
-    if do_alpha_dither_setup:
-        setup_alpha_dither(mat)
 
     alpha_input_connected = len(alpha_input.links) > 0
     new_nodes_created = False
@@ -1258,10 +1278,10 @@ def make_channel_as_alpha(mat, node, channel, do_setup=False, move_index=False):
 
     if do_setup:
         # Set up alpha connections
-        default_value = do_alpha_setup(mat, node, channel, do_alpha_dither_setup=True)
+        default_value = do_alpha_setup(mat, node, channel)
         node.inputs[channel.name].default_value = default_value
 
-class YAutoSetupNewYPaintChannel(bpy.types.Operator):
+class YAutoSetupNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
     bl_idname = "wm.y_auto_setup_new_ypaint_channel"
     bl_label = "Auto setup new " + get_addon_title() + " Channel"
     bl_description = "Auto setup new " + get_addon_title() + " channel"
@@ -1280,6 +1300,26 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         return get_active_ypaint_node()
+
+    def invoke(self, context, event):
+        if self.mode == 'ALPHA' and is_bl_newer_than(2, 80):
+            return context.window_manager.invoke_props_dialog(self)
+
+        return self.execute(context)
+
+    def draw(self, context):
+        row = split_layout(self.layout, 0.4)
+        col = row.column(align=False)
+        if not is_bl_newer_than(4, 2):
+            col.label(text='Blend Method:')
+            col.label(text='Shadow Method:')
+            col = row.column(align=False)
+            col.prop(self, 'blend_method', text='')
+            col.prop(self, 'shadow_method', text='')
+        else: 
+            col.label(text='Render Method:')
+            col = row.column(align=False)
+            col.prop(self, 'surface_render_method', text='')
 
     def execute(self, context):
 
@@ -1319,10 +1359,11 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator):
             create_ao_node(mat, node, channel, shift_other_nodes=True)
         elif self.mode == 'ALPHA':
             make_channel_as_alpha(mat, node, channel, do_setup=True, move_index=True)
+            set_material_methods(mat, self.surface_render_method, self.blend_method, self.shadow_method)
 
         return {'FINISHED'}
 
-class YNewYPaintChannel(bpy.types.Operator):
+class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
     bl_idname = "wm.y_add_new_ypaint_channel"
     bl_label = "Add new " + get_addon_title() + " Channel"
     bl_description = "Add new " + get_addon_title() + " channel"
@@ -1367,17 +1408,6 @@ class YNewYPaintChannel(bpy.types.Operator):
         default = False
     )
 
-    blend_method : EnumProperty(
-        name = 'Blend Method', 
-        description = 'Blend method for transparent material',
-        items = (
-            ('CLIP', 'Alpha Clip', ''),
-            ('HASHED', 'Alpha Hashed', ''),
-            ('BLEND', 'Alpha Blend', '')
-        ),
-        default = 'HASHED'
-    )
-
     @classmethod
     def poll(cls, context):
         return get_active_ypaint_node()
@@ -1413,7 +1443,8 @@ class YNewYPaintChannel(bpy.types.Operator):
         target_node = mat.node_tree.nodes.get(item.node_name) if item else None
 
         show_alpha_option = False
-        show_old_eevee_alpha_option = False
+        show_blend_method_option = False
+        show_render_method_option = False
         show_strength_option = False
 
         if item and target_node and target_node.type == 'BSDF_PRINCIPLED':
@@ -1422,7 +1453,9 @@ class YNewYPaintChannel(bpy.types.Operator):
             if item.input_name == 'Alpha':
                 show_alpha_option = True
                 if is_bl_newer_than(2, 80) and not is_bl_newer_than(4, 2):
-                    show_old_eevee_alpha_option = True
+                    show_blend_method_option = True
+                elif is_bl_newer_than(4, 2):
+                    show_render_method_option = True
 
             # Blender 4.0 and above has some default weight and strength set to 0.0
             if is_bl_newer_than(4):
@@ -1436,8 +1469,11 @@ class YNewYPaintChannel(bpy.types.Operator):
         col.label(text='Connect To:')
         if self.type != 'NORMAL':
             col.label(text='Color Space:')
-        if show_old_eevee_alpha_option:
+        if show_blend_method_option:
             col.label(text='Blend Method:')
+            col.label(text='Shadow Method:')
+        if show_render_method_option:
+            col.label(text='Render Method:')
         if self.type != 'NORMAL': col.label(text='')
 
         col = row.column(align=False)
@@ -1446,8 +1482,11 @@ class YNewYPaintChannel(bpy.types.Operator):
                 #lib.custom_icons[channel_socket_custom_icon_names[self.type]].icon_id)
         if self.type != 'NORMAL':
             col.prop(self, "colorspace", text='')
-        if show_old_eevee_alpha_option:
+        if show_blend_method_option:
             col.prop(self, 'blend_method', text='')
+            col.prop(self, 'shadow_method', text='')
+        if show_render_method_option:
+            col.prop(self, 'surface_render_method', text='')
         if self.type != 'NORMAL': col.prop(self, 'use_clamp')
 
         if show_strength_option:
@@ -1498,6 +1537,7 @@ class YNewYPaintChannel(bpy.types.Operator):
         strength_inp = None
         input_name = ''
         set_blend_method = False
+        set_render_method = False
         if item:
             target_node = mat.node_tree.nodes.get(item.node_name)
             input_name = item.input_name
@@ -1511,10 +1551,12 @@ class YNewYPaintChannel(bpy.types.Operator):
                 elif item.input_name == 'Subsurface Scale':
                     strength_inp = target_node.inputs.get('Subsurface Weight')
 
-            if (is_bl_newer_than(2, 80) and not is_bl_newer_than(4, 2) and
+            if (is_bl_newer_than(2, 80) and
                 target_node.type == 'BSDF_PRINCIPLED' and item.input_name == 'Alpha'
                 ):
-                set_blend_method = True
+                if is_bl_newer_than(4, 2):
+                    set_render_method = True
+                else: set_blend_method = True
 
         # Set input default value
         if inp and self.type != 'NORMAL': 
@@ -1540,6 +1582,8 @@ class YNewYPaintChannel(bpy.types.Operator):
         # Set blend method
         if set_blend_method:
             mat.blend_method = self.blend_method
+        if set_render_method:
+            mat.surface_render_method = self.surface_render_method
 
         # Change active channel
         last_index = len(yp.channels)-1
