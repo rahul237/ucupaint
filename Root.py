@@ -1343,6 +1343,12 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOpt
             self.report({'ERROR'}, "Channel named '"+name+"' is already available!")
             return {'CANCELLED'}
 
+        if self.mode == 'ALPHA':
+            existing_alpha_channels = [c for c in yp.channels if c.is_alpha]
+            if any(existing_alpha_channels):
+                self.report({'ERROR'}, "Alpha channel already exists ('"+existing_alpha_channels[0].name+"')!")
+                return {'CANCELLED'}
+
         color_chs = [c for c in yp.channels if c.type == 'RGB']
         if not any(color_chs):
             self.report({'ERROR'}, "Need at least one existing color channel!")
