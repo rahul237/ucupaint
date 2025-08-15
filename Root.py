@@ -1369,6 +1369,49 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOpt
 
         return {'FINISHED'}
 
+class YToggleChannelAsAlpha(bpy.types.Operator, BaseOperator.BlendMethodOptions):
+    bl_idname = "wm.y_toggle_channel_as_alpha"
+    bl_label = "Toggle " + get_addon_title() + " Channel as Alpha"
+    bl_description = "Toggle " + get_addon_title() + " channel as alpha channel"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return get_active_ypaint_node()
+
+    def invoke(self, context, event):
+        node = get_active_ypaint_node()
+        channel = context.parent
+        self.channel = channel
+        yp = channel.id_data.yp
+
+        # Check if there's other alpha channel
+        self.existing_alpha_ch_name = ''
+        for ch in yp.channels:
+            if ch == channel: continue
+            if ch.is_alpha:
+                self.existing_alpha_ch_name = ch.name
+
+        if 'Alpha' in channel.name or self.channel.is_alpha or (not self.channel.is_alpha and self.existing_alpha_ch_name != ''):
+            return self.execute(context)
+
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        self.layout.label(text='Are you sure to use \''+self.channel.name+'\' as alpha channel?', icon='ERROR')
+
+    def execute(self, context):
+        yp = self.channel.id_data.yp
+        if not self.channel.is_alpha and self.existing_alpha_ch_name != '':
+            self.report({'ERROR'}, "Alpha channel is already enabled in '"+self.existing_alpha_ch_name+"'!")
+            return {'CANCELLED'}
+
+        self.channel.is_alpha = not self.channel.is_alpha
+
+        check_all_channel_ios(yp)
+
+        return {'FINISHED'}
+
 class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
     bl_idname = "wm.y_add_new_ypaint_channel"
     bl_label = "Add new " + get_addon_title() + " Channel"
@@ -4689,6 +4732,7 @@ def register():
     bpy.utils.register_class(YConnectYPaintChannel)
     bpy.utils.register_class(YConnectYPaintChannelAlpha)
     bpy.utils.register_class(YNewYPaintChannel)
+    bpy.utils.register_class(YToggleChannelAsAlpha)
     bpy.utils.register_class(YAutoSetupNewYPaintChannel)
     bpy.utils.register_class(YMoveYPaintChannel)
     bpy.utils.register_class(YRemoveYPaintChannel)
@@ -4743,6 +4787,7 @@ def unregister():
     bpy.utils.unregister_class(YConnectYPaintChannel)
     bpy.utils.unregister_class(YConnectYPaintChannelAlpha)
     bpy.utils.unregister_class(YNewYPaintChannel)
+    bpy.utils.unregister_class(YToggleChannelAsAlpha)
     bpy.utils.unregister_class(YAutoSetupNewYPaintChannel)
     bpy.utils.unregister_class(YMoveYPaintChannel)
     bpy.utils.unregister_class(YRemoveYPaintChannel)

@@ -6934,6 +6934,13 @@ class YChannelSpecialMenu(bpy.types.Menu):
                 if mt[0] == 'MULTIPLIER': continue
                 col.operator('wm.y_new_ypaint_modifier', text=mt[1], icon_value=lib.get_icon('modifier')).type = mt[0]
 
+        # NOTE: This menu is only visible if name of the channel has 'Alpha' on it
+        if context.parent.type == 'VALUE' and 'Alpha' in context.parent.name:
+            col.separator()
+            col.label(text='Extra')
+            icon = 'CHECKBOX_HLT' if context.parent.is_alpha else 'CHECKBOX_DEHLT'
+            col.operator('wm.y_toggle_channel_as_alpha', text='Use as Alpha Channel', icon=icon)
+
         ypup = get_user_preferences()
         if ypup.show_experimental:
 
