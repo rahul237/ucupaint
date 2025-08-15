@@ -997,6 +997,10 @@ def update_yp_tree(tree):
 
     # Version 2.4 has new alpha channel system
     if version_tuple(yp.version) < (2, 4, 0):
+
+        # Auto alpha setup is now forever disabled
+        yp.alpha_auto_setup = False
+
         # Get color channel pair for alpha channel
         color_ch_name = ''
         alpha_socs = {}

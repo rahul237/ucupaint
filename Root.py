@@ -4343,7 +4343,7 @@ class YPaint(bpy.types.PropertyGroup):
     )
 
     # When enabled, alpha can create some node setup and change material settings, disable this to avoid that
-    alpha_auto_setup : BoolProperty(default=True)
+    alpha_auto_setup : BoolProperty(default=False)
 
     # HACK: Refresh tree to remove glitchy normal
     refresh_tree : BoolProperty(default=False)

@@ -2473,7 +2473,7 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
 
             # Enable alpha on main channel (will also update all the nodes)
             ori_enable_alpha = main_ch.enable_alpha
-            yp.alpha_auto_setup = False
+            #yp.alpha_auto_setup = False
             main_ch.enable_alpha = True
 
             # Reconnect tree with merged layer ids
@@ -2501,7 +2501,7 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
 
             # Recover original props
             main_ch.enable_alpha = ori_enable_alpha
-            yp.alpha_auto_setup = True
+            #yp.alpha_auto_setup = True
 
             if alpha_ch and ori_alpha_pair != '':
                 alpha_ch.alpha_pair_name = ori_alpha_pair
