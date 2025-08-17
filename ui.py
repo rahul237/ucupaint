@@ -1098,12 +1098,6 @@ def draw_root_channels_ui(context, layout, node):
                 row.alert = True
                 row.operator('wm.y_connect_ypaint_channel', icon='ERROR', text='Fix Unconnected Channel Output')
 
-            # Fix for alpha channel missing connection
-            elif channel.type == 'RGB' and channel.enable_alpha and is_output_unconnected(node, output_index + 1, channel):
-                row = mcol.row(align=True)
-                row.alert = True
-                row.operator('wm.y_connect_ypaint_channel_alpha', icon='ERROR', text='Fix Unconnected Alpha Output')
-
         row = mcol.row(align=True)
 
         rrow = row.row(align=True)
@@ -4256,6 +4250,20 @@ def main_draw(self, context):
                 # Github releases link
                 col.operator('wm.url_open', text='Update '+get_addon_title(), icon='ERROR').url = 'https://github.com/ucupumar/ucupaint/releases'
 
+    # Message will appear when legacy alpha toggle is enabled by accident
+    legacy_alpha_found = False
+    if not ypup.developer_mode:
+        for ch in yp.channels:
+            if ch.enable_alpha:
+                legacy_alpha_found = True
+                break
+
+        if legacy_alpha_found:
+            col = layout.column()
+            col.alert = True
+            col.label(text='Legacy alpha accidentally enabled!', icon='ERROR')
+            col.operator("wm.y_disable_legacy_channel_alpha", text='Disable Legacy Alpha')
+
     if ypup.developer_mode:
         height_root_ch = get_root_height_channel(yp)
         if height_root_ch and height_root_ch.enable_smooth_bump:
@@ -4626,6 +4634,7 @@ class NODE_UL_YPaint_channels(bpy.types.UIList):
         inputs = group_node.inputs
         outputs = group_node.outputs
         yp = group_node.node_tree.yp
+        ypup = get_user_preferences()
 
         input_index = item.io_index
         output_index = get_output_index(item)
@@ -4650,13 +4659,10 @@ class NODE_UL_YPaint_channels(bpy.types.UIList):
             if is_output_unconnected(group_node, output_index, item):
                 row.label(text='', icon='ERROR')
 
-            if item.type=='RGB' and item.enable_alpha:
+            if ypup.developer_mode and item.type=='RGB' and item.enable_alpha:
                 if len(inputs[input_index + 1].links) == 0:
                     row.prop(inputs[input_index + 1], 'default_value', text='')
                 else: row.label(text='', icon='LINKED')
-
-                if is_output_unconnected(group_node, output_index + 1, item):
-                    row.label(text='', icon='ERROR')
 
 def any_subitem_in_layer(layer):
     yp = layer.id_data.yp

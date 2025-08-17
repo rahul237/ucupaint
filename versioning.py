@@ -1711,6 +1711,26 @@ class YUpdateYPTrees(bpy.types.Operator):
         update_routine('')
         return {'FINISHED'}
 
+class YDisableLegacyAlpha(bpy.types.Operator):
+    bl_idname = "wm.y_disable_legacy_channel_alpha"
+    bl_label = "Disable Legacy Alpha"
+    bl_description = "Disable legacy channel's alpha"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return get_active_ypaint_node()
+
+    def execute(self, context):
+        node = get_active_ypaint_node()
+        yp = node.node_tree.yp
+
+        for ch in yp.channels:
+            if ch.enable_alpha:
+                ch.enable_alpha = False
+
+        return {'FINISHED'}
+
 class YUpdateRemoveSmoothBump(bpy.types.Operator):
     bl_idname = "wm.y_update_remove_smooth_bump"
     bl_label = "Remove Smooth Bump"
@@ -1787,6 +1807,7 @@ class YUpdateRemoveSmoothBump(bpy.types.Operator):
 
 def register():
     bpy.utils.register_class(YUpdateYPTrees)
+    bpy.utils.register_class(YDisableLegacyAlpha)
     bpy.utils.register_class(YUpdateRemoveSmoothBump)
 
     bpy.app.handlers.load_post.append(update_node_tree_libs)
@@ -1794,6 +1815,7 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(YUpdateYPTrees)
+    bpy.utils.unregister_class(YDisableLegacyAlpha)
     bpy.utils.unregister_class(YUpdateRemoveSmoothBump)
 
     bpy.app.handlers.load_post.remove(update_node_tree_libs)
