@@ -995,7 +995,18 @@ def update_yp_tree(tree):
                         height = get_entity_prop_value(height_ch, 'bump_distance')
                         set_entity_prop_value(height_ch, 'bump_distance', height * 5)
 
-    # Version 2.4 has new alpha channel system
+    # Version 2.3.5 has blur bake type
+    if version_tuple(yp.version) < (2, 3, 5):
+        images = get_yp_images(yp)
+
+        for i, image in enumerate(images):
+            bi = image.y_bake_info
+
+            if bi.is_baked_entity:
+                if bi.blur:
+                    bi.blur_type = 'NOISE'
+
+    # Version 2.4.0 has new alpha channel system
     if version_tuple(yp.version) < (2, 4, 0):
 
         # Auto alpha setup is now forever disabled
