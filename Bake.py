@@ -2282,10 +2282,11 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
         default = True
     )
 
-    #height_aware : BoolProperty(
-    #        name = 'Height Aware',
-    #        description = 'Height will take account for merge',
-    #        default = True)
+    force_mix_blending : BoolProperty(
+        name = 'Force Mix Blending',
+        description = 'Force to use mix blending while merging so there\'s no missing parts on the merge result',
+        default = True
+    )
 
     @classmethod
     def poll(cls, context):
@@ -2300,7 +2301,7 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
         self.invoke_operator(context)
 
         node = get_active_ypaint_node()
-        yp = node.node_tree.yp
+        yp = self.yp = node.node_tree.yp
 
         # Get active layer
         layer_idx = self.layer_idx = yp.active_layer_index
@@ -2370,18 +2371,30 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
 
         return context.window_manager.invoke_props_dialog(self, width=320)
 
+    def check(self, context):
+        return True
+
     def draw(self, context):
         row = split_layout(self.layout, 0.5)
+
+        main_ch = self.yp.channels[int(self.channel_idx)]
+        ch = self.layer.channels[int(self.channel_idx)]
+        blend_type = ch.blend_type if main_ch.type != 'NORMAL' else ch.normal_blend_type
 
         col = row.column(align=False)
         col.label(text='Main Channel:')
         col.label(text='Apply Modifiers:')
         col.label(text='Apply Neighbor Modifiers:')
+        
+        if blend_type != 'MIX':
+            col.label(text='Force Mix Blending:')
 
         col = row.column(align=False)
         col.prop(self, 'channel_idx', text='')
         col.prop(self, 'apply_modifiers', text='')
         col.prop(self, 'apply_neighbor_modifiers', text='')
+        if blend_type != 'MIX':
+            col.prop(self, 'force_mix_blending', text='')
 
         if self.legacy_on_non_object_mode:
             col = self.layout.column(align=True)
@@ -2465,13 +2478,14 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
             if not self.apply_neighbor_modifiers:
                 neighbor_oris = remember_and_disable_layer_modifiers_and_transforms(neighbor_layer, False)
 
-            # Make sure to Use mix on layer channel
-            if main_ch.type != 'NORMAL':
-                ori_blend_type = ch.blend_type
-                ch.blend_type = 'MIX'
-            else:
-                ori_blend_type = ch.normal_blend_type
-                ch.normal_blend_type = 'MIX'
+            # Force to use mix on layer channel
+            if self.force_mix_blending:
+                if main_ch.type != 'NORMAL':
+                    ori_blend_type = ch.blend_type
+                    ch.blend_type = 'MIX'
+                else:
+                    ori_blend_type = ch.normal_blend_type
+                    ch.normal_blend_type = 'MIX'
 
             # New alpha channel can make the merging result goes blank, so disable it first
             color_ch, alpha_ch = get_color_alpha_ch_pairs(yp)
@@ -2515,9 +2529,10 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
             if alpha_ch and ori_alpha_pair != '':
                 alpha_ch.alpha_pair_name = ori_alpha_pair
 
-            if main_ch.type != 'NORMAL':
-                ch.blend_type = ori_blend_type
-            else: ch.normal_blend_type = ori_blend_type
+            if self.force_mix_blending:
+                if main_ch.type != 'NORMAL':
+                    ch.blend_type = ori_blend_type
+                else: ch.normal_blend_type = ori_blend_type
 
             # Set all channel intensity value to 1.0
             for c in layer.channels:
@@ -2609,9 +2624,6 @@ class YMergeLayer(bpy.types.Operator, BaseBakeOperator):
             # Remap parents
             for lay in yp.layers:
                 lay.parent_idx = get_layer_index_by_name(yp, parent_dict[lay.name])
-
-            if height_ch and main_ch.type == 'NORMAL' and height_ch.normal_map_type == 'BUMP_MAP':
-                height_ch.bump_distance = max_height
 
             reconnect_yp_nodes(tree)
             rearrange_yp_nodes(tree)
