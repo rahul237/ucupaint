@@ -1050,31 +1050,39 @@ def update_yp_tree(tree):
         color_ch_name = ''
         alpha_socs = {}
         alpha_soc_defaults = {}
-        for ch in yp.channels:
-            if ch.enable_alpha:
+        background_values = {}
+        color_base = (1,0, 1.0, 1.0)
+        mats = get_materials_using_yp(yp)
+        for mat in mats:
+            alpha_socs[mat.name] = {}
+            alpha_soc_defaults[mat.name] = {}
+            yp_nodes = [node for node in mat.node_tree.nodes if node.type == 'GROUP' and node.node_tree and node.node_tree.yp == yp]
+            for node in yp_nodes:
+                alpha_socs[mat.name][node.name] = []
+                for ch in yp.channels:
 
-                # Remember original connections
-                mats = get_materials_using_yp(yp)
-                for mat in mats:
-                    alpha_socs[mat.name] = {}
-                    alpha_soc_defaults[mat.name] = {}
-                    for node in mat.node_tree.nodes:
-                        if node.type == 'GROUP' and node.node_tree and node.node_tree.yp == yp:
-                            alpha_socs[mat.name][node.name] = []
+                    if ch.enable_alpha:
 
-                            inp = node.inputs.get(ch.name + io_suffix['ALPHA'])
-                            outp = node.outputs.get(ch.name + io_suffix['ALPHA'])
+                        # Remember original connections
+                        inp = node.inputs.get(ch.name + io_suffix['ALPHA'])
+                        outp = node.outputs.get(ch.name + io_suffix['ALPHA'])
 
-                            if inp: 
-                                alpha_soc_defaults[mat.name][node.name] = inp.default_value
-                            if outp:
-                                for link in outp.links:
-                                    alpha_socs[mat.name][node.name].append(link.to_socket)
+                        if inp: 
+                            alpha_soc_defaults[mat.name][node.name] = background_values['Alpha'] = inp.default_value
+                        if outp:
+                            for link in outp.links:
+                                alpha_socs[mat.name][node.name].append(link.to_socket)
 
-                ch.enable_alpha = False
-                color_ch_name = ch.name
+                        ch.enable_alpha = False
+                        color_ch_name = ch.name
 
-                break
+                    if ch.type != 'NORMAL':
+                        inp = node.inputs.get(ch.name)
+                        if inp:
+                            val = inp.default_value
+                            if ch.type == 'RGB':
+                                val = Color((val[0], val[1], val[2]))
+                            background_values[ch.name] = val
 
         if color_ch_name != '':
 
@@ -1117,19 +1125,41 @@ def update_yp_tree(tree):
                 if 'Solid Color' in layer.name: layer.name = 'Hole'
 
                 source = get_layer_source(layer)
-                source.outputs[0].default_value = (0.0, 0.0, 0.0, 1.0)
+                alpha_base = 1.0
+                if 'Alpha' in background_values:
+                    alpha_base = background_values['Alpha']
+                source.outputs[0].default_value = (alpha_base, alpha_base, alpha_base, 1.0)
 
-                # Disable color and enable alpha channel
                 layer_color_ch, layer_alpha_ch = get_layer_color_alpha_ch_pairs(layer)
-                if layer_color_ch and layer_alpha_ch:
-                    if layer_color_ch.enable_transition_ramp:
-                        layer_color_ch.unpair_alpha = True
-                        height_ch = get_height_channel(layer)
-                        if height_ch and height_ch.enable_transition_bump and not height_ch.transition_bump_flip:
-                            set_entity_prop_value(layer_alpha_ch, 'transition_bump_fac', 0.0)
-                    else: layer_color_ch.enable = False
 
-                    layer_alpha_ch.enable = True
+                # Enable the alpha channel
+                if layer_alpha_ch: layer_alpha_ch.enable = True
+
+                if alpha_base != 0.0:
+                    # Dealing with non-zero alpha base
+                    for i, ch in enumerate(layer.channels):
+                        if ch == layer_alpha_ch: continue
+                        root_ch = yp.channels[i]
+                        if root_ch.name in background_values:
+                            val = background_values[root_ch.name]
+                            ch.override = True
+                            if ch == layer_color_ch:
+                                ch.unpair_alpha = True
+
+                            if root_ch.type == 'RGB':
+                                set_entity_prop_value(ch, 'override_color', val)
+                            else: set_entity_prop_value(ch, 'override_value', val)
+                else:
+                    # Disable the color channel if the alpha value is 0.0
+                    layer_color_ch.enable = False
+
+                # Dealing with transition ramp
+                if layer_color_ch and layer_color_ch.enable_transition_ramp:
+                    layer_color_ch.enable = True
+                    layer_color_ch.unpair_alpha = True
+                    height_ch = get_height_channel(layer)
+                    if height_ch and height_ch.enable_transition_bump and not height_ch.transition_bump_flip:
+                        set_entity_prop_value(layer_alpha_ch, 'transition_bump_fac', 0.0)
 
     # SECTION II: Updates based on the blender version
 
