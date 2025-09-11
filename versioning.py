@@ -1051,7 +1051,6 @@ def update_yp_tree(tree):
         alpha_socs = {}
         alpha_soc_defaults = {}
         background_values = {}
-        color_base = (1,0, 1.0, 1.0)
         mats = get_materials_using_yp(yp)
         for mat in mats:
             alpha_socs[mat.name] = {}

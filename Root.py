@@ -4319,6 +4319,8 @@ class YPaintMaterialProps(bpy.types.PropertyGroup):
     #ori_blend_method : StringProperty(default='')
     active_ypaint_node : StringProperty(default='')
 
+    expand_content : BoolProperty(default=False)
+
 class YPaintTimer(bpy.types.PropertyGroup):
     time : StringProperty(default='')
 

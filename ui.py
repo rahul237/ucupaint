@@ -13,6 +13,18 @@ RGBA_CHANNEL_PREFIX = {
     'B' : 'b_',
 }
 
+def get_material_ui(mat):
+    if not mat: return None
+    ypui = bpy.context.window_manager.ypui
+
+    mui = ypui.materials.get(mat.name)
+    if not mui:
+        mui = ypui.materials.add()
+        mui.name = mat.name
+        mui.material = mat
+
+    return mui
+
 def update_yp_ui():
 
     # Get active yp node
@@ -4240,7 +4252,47 @@ def main_draw(self, context):
             row.operator("object.material_slot_select", text="Select")
             row.operator("object.material_slot_deselect", text="Deselect")
 
-        box.template_ID(obj, "active_material", new="material.new")
+        row = box.row(align=True)
+        mat = get_active_material()
+        mui = get_material_ui(mat)
+        if mui:
+            icon = 'DOWNARROW_HLT' if mui.expand_content else 'RIGHTARROW'
+            row.prop(mui, 'expand_content', emboss=False, text='', icon=icon)
+        row.template_ID(obj, "active_material", new="material.new")
+
+        if mui and mui.expand_content:
+            row = box.row(align=True)
+            row.label(text='', icon='BLANK1')
+            col = row.column(align=False)
+
+            if not is_bl_newer_than(2, 79):
+                rrow = col.row(align=True)
+                rrow.label(text='Alpha Blend:')
+                rrow.prop(mat.game_settings, 'alpha_blend', text='')
+
+            elif not is_bl_newer_than(4, 2):
+
+                rrow = col.row(align=True)
+                rrow.label(text='Blend Mode:')
+                rrow.prop(mat, 'blend_method', text='')
+
+                rrow = col.row(align=True)
+                rrow.label(text='Shadow Mode:')
+                rrow.prop(mat, 'shadow_method', text='')
+            else:
+
+                # NOTE: Displacement setup probably need to be rethinked again before showing this option
+                #rrow = col.row(align=True)
+                #rrow.label(text='Displacement:')
+                #rrow.prop(mat, 'displacement_method', text='')
+
+                rrow = col.row(align=True)
+                rrow.label(text='Render Method:')
+                rrow.prop(mat, 'surface_render_method', text='')
+
+                rrow = col.row(align=True)
+                rrow.label(text='Transparent Shadows:')
+                rrow.prop(mat, 'use_transparent_shadow', text='')
 
     if not node:
         layout.label(text="No active " + get_addon_title() + " node!", icon='ERROR')
@@ -7797,6 +7849,8 @@ class YMaterialUI(bpy.types.PropertyGroup):
     name : StringProperty(default='')
     active_ypaint_node : StringProperty(default='') #, update=update_mat_active_yp_node)
 
+    expand_content : BoolProperty(default=False)
+
 class YPaintUI(bpy.types.PropertyGroup):
     show_object : BoolProperty(
         name = 'Active Object',
@@ -7927,15 +7981,15 @@ def save_mat_ui_settings():
         if mat: 
             try: mat.yp.active_ypaint_node = mui.active_ypaint_node
             except Exception as e: print(e)
+            mat.yp.expand_content = mui.expand_content
 
 def load_mat_ui_settings():
     ypui = bpy.context.window_manager.ypui
     for mat in bpy.data.materials:
+        mui = get_material_ui(mat)
         if mat.yp.active_ypaint_node != '':
-            mui = ypui.materials.add()
-            mui.name = mat.name
-            mui.material = mat
             mui.active_ypaint_node = mat.yp.active_ypaint_node
+        mui.expand_content = mat.yp.expand_content
 
 @persistent
 def yp_save_ui_settings(scene):
