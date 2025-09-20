@@ -799,6 +799,11 @@ def set_object_select(obj, val):
         obj.select_set(val)
     else: obj.select = val
 
+def get_object_hide(obj):
+    if is_bl_newer_than(2, 80):
+        return obj.hide_get()
+    return obj.hide
+
 def set_object_hide(obj, val):
     if is_bl_newer_than(2, 80):
         obj.hide_set(val)
@@ -1574,18 +1579,14 @@ def create_essential_nodes(tree, solid_value=False, texcoord=False, geometry=Fal
         node = tree.nodes.new('ShaderNodeTexCoord')
         node.name = TEXCOORD
 
-def get_active_mat_output_node(tree):
-    # Search for output
-    for node in tree.nodes:
-        if node.bl_idname == 'ShaderNodeOutputMaterial' and node.is_active_output:
-            return node
-
-    return None
-
-def get_material_output(mat):
+def get_material_output(mat, create_one=False):
     if mat != None and mat.node_tree:
         output = [n for n in mat.node_tree.nodes if n.type == 'OUTPUT_MATERIAL' and n.is_active_output]
         if output: return output[0]
+
+        # Create new material output if there's none
+        if create_one:
+            return mat.node_tree.nodes.new('ShaderNodeOutputMaterial')
     return None
 
 def get_all_image_users(image):
@@ -3529,7 +3530,7 @@ def remove_temp_uv(obj, entity):
             except: print('EXCEPTIION: Cannot set modifier mirror offset!')
 
 def refresh_temp_uv(obj, entity): 
-    if obj.type != 'MESH':
+    if not obj or obj.type != 'MESH':
         return False
 
     if not entity:
