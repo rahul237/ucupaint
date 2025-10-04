@@ -1031,6 +1031,7 @@ def set_material_methods(mat, blend_method='HASHED', shadow_method='HASHED'):
 def do_alpha_setup(mat, node, channel):
     tree = mat.node_tree
     yp = node.node_tree.yp
+    default_value = 1.0
 
     if channel.enable_alpha:
         input_index = channel.io_index
@@ -1046,17 +1047,16 @@ def do_alpha_setup(mat, node, channel):
         try: color_ch = yp.channels[channel.alpha_pair_name]
         except Exception as e:
             print(e)
-            return
+            return default_value
 
         output = node.outputs[color_ch.name]
 
     # Main channel output need to be already connected
     if len(output.links) == 0:
-        return
+        return default_value
 
     alpha_input_connected = len(alpha_input.links) > 0
     new_nodes_created = False
-    default_value = 1.0
     for i, l in enumerate(output.links):
 
         if is_valid_bsdf_node(l.to_node) or l.to_node.type == 'OUTPUT_MATERIAL':
@@ -1218,24 +1218,23 @@ class YConnectYPaintChannel(bpy.types.Operator):
 
         return {'FINISHED'}
 
-def make_channel_as_alpha(mat, node, channel, do_setup=False, move_index=False):
+def make_channel_as_alpha(mat, node, channel, do_setup=False, move_index=False, ch_pair_name=''):
     yp = channel.id_data.yp
     if channel.type != 'VALUE': return
 
     # Mark channel as alpha
     channel.is_alpha = True
 
-    # Set first RGB channel as the pair
     color_ch = None
     color_idx = -1
-    for i, ch in enumerate(yp.channels):
-        if ch.type == 'RGB':
-            yp.halt_update = True
-            channel.alpha_pair_name = ch.name
-            yp.halt_update = False
-            color_ch = ch
-            color_idx = i
-            break
+    if ch_pair_name != '':
+        color_ch = yp.channels.get(ch_pair_name)
+        if color_ch: color_idx = get_channel_index(color_ch)
+
+    if color_ch:
+        yp.halt_update = True
+        channel.alpha_pair_name = color_ch.name
+        yp.halt_update = False
 
     # Move channel to below color channel
     if move_index and color_ch:
@@ -1269,25 +1268,47 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOpt
         default = 'ALPHA'
     )
 
+    alpha_pair_name : StringProperty(
+        name = 'Alpha Channel Pair',
+        description = 'Color channel pair for alpha channel',
+        default='',
+    )
+
     @classmethod
     def poll(cls, context):
         return get_active_ypaint_node()
 
     def invoke(self, context, event):
-        if self.mode == 'ALPHA' and is_bl_newer_than(2, 80) and not is_bl_newer_than(4, 2):
+        if self.mode == 'ALPHA':
+            node = get_active_ypaint_node()
+            yp = node.node_tree.yp
+
+            # Default alpha pair channel
+            for ch in yp.channels:
+                if ch.type == 'RGB':
+                    self.alpha_pair_name = ch.name
+                    break
+
             return context.window_manager.invoke_props_dialog(self)
 
         return self.execute(context)
 
     def draw(self, context):
+        node = get_active_ypaint_node()
+        yp = node.node_tree.yp
+
         row = split_layout(self.layout, 0.4)
         col = row.column(align=False)
         if not is_bl_newer_than(4, 2):
             col.label(text='Blend Method:')
             col.label(text='Shadow Method:')
-            col = row.column(align=False)
+        col.label(text='Channel Pair:')
+
+        col = row.column(align=False)
+        if not is_bl_newer_than(4, 2):
             col.prop(self, 'blend_method', text='')
             col.prop(self, 'shadow_method', text='')
+        col.prop_search(self, "alpha_pair_name", yp, "channels", text='')
 
     def execute(self, context):
 
@@ -1324,6 +1345,7 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOpt
 
         # Create new channel
         channel = create_new_yp_channel(group_tree, name, ch_type, non_color=True)
+        ch_name = channel.name
 
         # Update io
         check_all_channel_ios(yp, yp_node=node)
@@ -1332,8 +1354,12 @@ class YAutoSetupNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOpt
         if self.mode == 'AO':
             create_ao_node(mat, node, channel, shift_other_nodes=True)
         elif self.mode == 'ALPHA':
-            make_channel_as_alpha(mat, node, channel, do_setup=True, move_index=True)
+            make_channel_as_alpha(mat, node, channel, do_setup=True, move_index=True, ch_pair_name=self.alpha_pair_name)
             set_material_methods(mat, self.blend_method, self.shadow_method)
+
+        # Set active channel to the newly created one
+        channel = yp.channels.get(ch_name)
+        yp.active_channel_index = get_channel_index(channel)
 
         return {'FINISHED'}
 
@@ -1425,6 +1451,12 @@ class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
         default = False
     )
 
+    alpha_pair_name : StringProperty(
+        name = 'Alpha Channel Pair',
+        description = 'Color channel pair for alpha channel',
+        default='',
+    )
+
     @classmethod
     def poll(cls, context):
         return get_active_ypaint_node()
@@ -1447,6 +1479,12 @@ class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
 
         refresh_input_coll(self, context, self.type)
         self.connect_to = ''
+
+        # Default alpha pair channel
+        for ch in channels:
+            if ch.type == 'RGB':
+                self.alpha_pair_name = ch.name
+                break
 
         return context.window_manager.invoke_props_dialog(self)
 
@@ -1488,6 +1526,11 @@ class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
             col.label(text='Shadow Method:')
         if self.type != 'NORMAL': col.label(text='')
 
+        if show_alpha_option:
+            col.label(text='')
+            if self.use_as_alpha:
+                col.label(text='Channel Pair:')
+
         col = row.column(align=False)
         col.prop(self, 'name', text='')
         col.prop_search(self, "connect_to", self, "input_coll", icon = 'NODETREE', text='')
@@ -1503,7 +1546,11 @@ class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
             col.prop(self, "set_strength_to_one")
 
         if show_alpha_option:
+            node = get_active_ypaint_node()
+            yp = node.node_tree.yp
             col.prop(self, "use_as_alpha")
+            if self.use_as_alpha:
+                col.prop_search(self, "alpha_pair_name", yp, "channels", text='')
 
     def execute(self, context):
 
@@ -1584,7 +1631,7 @@ class YNewYPaintChannel(bpy.types.Operator, BaseOperator.BlendMethodOptions):
 
         # Set use as alpha
         if self.use_as_alpha and self.type == 'VALUE':
-            make_channel_as_alpha(mat, node, channel)
+            make_channel_as_alpha(mat, node, channel, ch_pair_name=self.alpha_pair_name)
 
         # Set blend method
         if set_blend_method:

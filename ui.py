@@ -1270,7 +1270,7 @@ def draw_root_channels_ui(context, layout, node):
                 brow.active = not yp.use_baked or channel.no_layer_using
                 #brow.label(text='', icon_value=lib.get_icon('input'))
                 brow.label(text='', icon='BLANK1')
-                brow.label(text='Color Channel:')
+                brow.label(text='Channel Pair:')
                 brow.prop_search(channel, "alpha_pair_name", yp, "channels", text='')
 
                 brow = bcol.row(align=True)
