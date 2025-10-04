@@ -1043,11 +1043,9 @@ def update_yp_tree(tree):
     # Version 2.4.0 has new alpha channel system
     if version_tuple(yp.version) < (2, 4, 0):
 
-        # Auto alpha setup is now forever disabled
-        yp.alpha_auto_setup = False
-
         # Get color channel pair for alpha channel
         color_ch_name = ''
+        backface_mode = ''
         alpha_socs = {}
         alpha_soc_defaults = {}
         background_values = {}
@@ -1074,6 +1072,7 @@ def update_yp_tree(tree):
 
                         ch.enable_alpha = False
                         color_ch_name = ch.name
+                        backface_mode = ch.backface_mode
 
                     if ch.type != 'NORMAL':
                         inp = node.inputs.get(ch.name)
@@ -1088,6 +1087,8 @@ def update_yp_tree(tree):
             # Create alpha channel
             alpha_ch = Root.create_new_yp_channel(tree, 'Alpha', 'VALUE', non_color=True)
             alpha_ch.is_alpha = True
+            if backface_mode != '':
+                alpha_ch.backface_mode = backface_mode
             yp.halt_update = True
             alpha_ch.alpha_pair_name = color_ch_name
             yp.halt_update = False
