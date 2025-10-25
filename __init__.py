@@ -15,6 +15,10 @@ if "bpy" in locals():
     import imp
     imp.reload(Localization)
     imp.reload(BaseOperator)
+    imp.reload(performance)
+    imp.reload(ui_performance)
+    imp.reload(layer_performance)
+    imp.reload(node_performance)
     imp.reload(image_ops)
     imp.reload(common)
     imp.reload(bake_common)
@@ -50,7 +54,7 @@ if "bpy" in locals():
     imp.reload(Test)
 else:
     from . import Localization
-    from . import BaseOperator, image_ops, common, bake_common, modifier_common, lib, Decal, ui, subtree, transition_common, input_outputs, node_arrangements, node_connections, preferences
+    from . import BaseOperator, performance, ui_performance, layer_performance, node_performance, image_ops, common, bake_common, modifier_common, lib, Decal, ui, subtree, transition_common, input_outputs, node_arrangements, node_connections, preferences
     from . import vector_displacement_lib, vector_displacement
     from . import vcol_editor, transition, BakeTarget, BakeInfo, UDIM, ImageAtlas, MaskModifier, Mask, Modifier, NormalMapModifier, Layer, ListItem, Bake, BakeToLayer, Root, versioning
     from . import addon_updater_ops
@@ -61,7 +65,14 @@ import bpy
 def register():
     Localization.register_module(ui)
 
+    # Register performance modules first
+    performance.register()
+    ui_performance.register()
+
     image_ops.register()
+
+    # Register other core modules
+    # (layer_performance and node_performance will be registered after Layer/subtree)
     preferences.register()
     lib.register()
     Decal.register()
@@ -86,7 +97,15 @@ def register():
     addon_updater_ops.register()
     Test.register()
 
+    # Apply performance optimizations after core modules are loaded
+    layer_performance.register()
+    node_performance.register()
+
     print('INFO: ' + common.get_addon_title() + ' ' + common.get_current_version_str() + ' is registered!')
+    print('INFO: Performance optimizations enabled')
+    print('INFO: - Optimized update callbacks active')
+    print('INFO: - Node pooling active')
+    print('INFO: - UI debouncing active')
 
 def unregister():
     Localization.unregister_module(ui)
@@ -115,6 +134,14 @@ def unregister():
     versioning.unregister()
     addon_updater_ops.unregister()
     Test.unregister()
+
+    # Unregister performance optimizations first
+    node_performance.unregister()
+    layer_performance.unregister()
+
+    # Unregister performance modules last
+    ui_performance.unregister()
+    performance.unregister()
 
     print('INFO: ' + common.get_addon_title() + ' ' + common.get_current_version_str() + ' is unregistered!')
 
